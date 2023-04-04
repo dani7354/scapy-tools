@@ -1,0 +1,7 @@
+*.pcap
+*.pcapng
+.swp
+.idea/
+*.csv
+venv/
+.DS_Store
