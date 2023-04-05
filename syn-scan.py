@@ -4,7 +4,7 @@ from scapy.all import IP, TCP, RandShort, sr
 
 
 def parse_arguments():
-    parser = ArgumentParser(description="Reads PCAP file and prints summary.")
+    parser = ArgumentParser(description="Sends TCP SYN packet to selected ports.")
     parser.add_argument("-t", "--target", dest="target", type=str, required=True)
     parser.add_argument("-p", "--ports", dest="ports", type=int, nargs="*", required=True)
 
