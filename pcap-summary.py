@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from scapy.all import rdpcap, PacketList, IP, TCP, UDP
 from argparse import ArgumentParser
 import collections
