@@ -14,10 +14,11 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
-    ports_str = ", ".join((str(x) for x in args.ports))
+    ports = set(args.ports)
+    ports_str = ", ".join((str(x) for x in ports))
     print(f"Target: {args.target} TCP ports {ports_str}")
 
-    packets = IP(dst=args.target)/TCP(sport=RandShort(), dport=args.ports, flags="S")
+    packets = IP(dst=args.target)/TCP(sport=RandShort(), dport=list(ports), flags="S")
     answered, unanswered = sr(packets, inter=0.2, timeout=1, retry=1)
 
     print(answered.nsummary(lfilter = lambda s,r: r.sprintf("%TCP.flags%") == "SA"))
