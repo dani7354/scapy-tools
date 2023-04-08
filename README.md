@@ -34,7 +34,7 @@ Sniffs packets from the selected interface using Scapy's sniff function.
 
 ### Usage
 ```
-# ./traffic_sniffer.py -o my_captured_packets.py
+# ./traffic_sniffer.py -i eth0 -f "tcp port 443 or tcp port 80"  -o my_captured_packets.py
 ```
 
 ## pcap_summary.py
