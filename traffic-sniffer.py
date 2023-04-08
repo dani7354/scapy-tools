@@ -4,8 +4,8 @@ from scapy.all import sniff, wrpcap
 import time
 
 
-INTERFACE = "lo0"
-FILTER = ""
+INTERFACE = "any"
+FILTER = ""  # BPF syntax
 
 packets = []
 
@@ -29,7 +29,7 @@ def save_packet(packet):
 
 def main():
     args = parse_arguments()
-    
+
     print(f"Sniffing packets on interface {INTERFACE} with filter {FILTER}...")
     sniff(iface=INTERFACE, filter=FILTER, prn=save_packet, store=0)
 

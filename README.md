@@ -20,6 +20,14 @@ changed in the script.
 # ./syn-flood.py -t 192.168.1.133
 ```
 
+## traffic-sniffer.py
+Sniffs packets from the selected interface using Scapy's sniff function.
+
+### Usage
+```
+# ./traffic-sniffer.py -o my_captured_packets.py
+```
+
 ## pcap-summary.py
 Reads a packet capture file (pcap) and creates an overview of the packet count
 in two CSV files containing lines for each IP and service port.
