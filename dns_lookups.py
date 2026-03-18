@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import dataclasses
+from collections import Counter
 from pathlib import Path
 from scapy.all import *
 from scapy.layers.dns import DNS
@@ -72,6 +73,7 @@ def main() -> None:
         sys.exit(1)
 
     lookups = []
+    id_counter = Counter()
     for p in rdpcap(str(file_path)):
         ip_layer = p.getlayer(IP)
         src = ""
@@ -87,6 +89,9 @@ def main() -> None:
             continue
 
         dns_data = p.getlayer(DNS)
+        dns_id = dns_data.id  # TODO: maybe use this!
+        is_response = True if dns_data.qr else False
+        id_counter[dns_id] += 1
         if not (request := _try_parse_request(dns_data)):
             print("No domains present in request, skipping...")
             continue
@@ -94,7 +99,7 @@ def main() -> None:
         resolved_ips = _try_parse_response(dns_data)
         qtypes, domains = request
         lookups.append(DNSLookup(
-            type=_qtypes[qtypes[0]],
+            type=_qtypes[int(qtypes[0])],
             src_ip=src,
             dst_ip=dst,
             domains=domains,
@@ -108,6 +113,8 @@ def main() -> None:
     resolved_ips_by_domain = get_resolved_ips_by_domain(lookups)
     for ri in resolved_ips_by_domain:
         print(f"{ri}: {resolved_ips_by_domain[ri]}")
+
+    print(id_counter.most_common(10))
 
 
 
