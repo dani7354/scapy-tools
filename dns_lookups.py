@@ -19,26 +19,40 @@ _qtypes = {
 
 @dataclasses.dataclass(frozen=True, eq=True)
 class DNSLookup:
-    type: str
-    src_ip: str
-    dst_ip: str
+    transaction_id: int
+    qtype: str
+    client_ip: str
+    server_ip: str
     domains: list[str] = dataclasses.field(default_factory=list)
     resolved_ips: list[str] = dataclasses.field(default_factory=list)
 
 
+def _try_parse_ips(data: Packet) -> tuple[str, str] | None:
+    server_ip, client_ip = None, None
+    if ip_layer := data.getlayer(IP):
+        server_ip = ip_layer.src
+        client_ip = ip_layer.dst
+        if not server_ip or not client_ip:
+            return None
+
+    return server_ip, client_ip
+
+
 def _try_parse_response(dns_data: Packet) -> list[str]:
-    ips = []
+    ips, rtypes = [], set()
     a = dns_data.an
-    while a and hasattr(a, "rdata"):
-        ips.append(a.rdata)
-        a = a.payload
+    if a and hasattr(a, "rdata"):
+        for r in a:
+            ips.append(r.rdata)
+            rtypes.add(r.type)
+
+    print(rtypes)
 
     return ips
 
 
 def _try_parse_request(dns_data: Packet) -> tuple[list[str], list[str]]:
-    domains = []
-    qtypes = []
+    domains, qtypes = [], []
     q = dns_data.qd
     while q and hasattr(q, "qname"):
         domains.append(q.qname.decode().rstrip(".") if isinstance(q.qname, bytes) else q.qname.rstrip("."))
@@ -48,11 +62,11 @@ def _try_parse_request(dns_data: Packet) -> tuple[list[str], list[str]]:
     return qtypes, domains
 
 
-def list_distinct_domain_names(lookups: list[DNSLookup]) -> set[str]:
+def _list_distinct_domain_names(lookups: list[DNSLookup]) -> set[str]:
     return set(domain for lookup in lookups for domain in lookup.domains)
 
 
-def get_resolved_ips_by_domain(lookups: list[DNSLookup]) -> dict[str, set[str]]:
+def _list_resolved_ips_by_domain(lookups: list[DNSLookup]) -> dict[str, set[str]]:
     resolved_ips_by_domain = defaultdict(set)
     for l in lookups:
         for d in l.domains:
@@ -73,49 +87,39 @@ def main() -> None:
         sys.exit(1)
 
     lookups = []
-    id_counter = Counter()
     for p in rdpcap(str(file_path)):
-        ip_layer = p.getlayer(IP)
-        src = ""
-        dst = ""
-        if ip_layer:
-            src = ip_layer.src
-            dst = ip_layer.dst
-            if not src or not dst:
-                print("No source or destination IP, skipping...")
-                continue
+        server_ip, client_ip = _try_parse_ips(p)
 
-        if not p.haslayer(DNS) or "an" not in dir(p.getlayer(DNS)):
+        if not p.haslayer(DNS) or not server_ip or not client_ip:
             continue
 
         dns_data = p.getlayer(DNS)
-        dns_id = dns_data.id  # TODO: maybe use this!
         is_response = True if dns_data.qr else False
-        id_counter[dns_id] += 1
+        if not is_response:
+            continue
+
         if not (request := _try_parse_request(dns_data)):
             print("No domains present in request, skipping...")
             continue
 
+        transaction_id = dns_data.id
         resolved_ips = _try_parse_response(dns_data)
         qtypes, domains = request
+        qtype = _qtypes[int(qtypes[0])]
         lookups.append(DNSLookup(
-            type=_qtypes[int(qtypes[0])],
-            src_ip=src,
-            dst_ip=dst,
+            transaction_id= transaction_id,
+            qtype=qtype,
+            client_ip=client_ip,
+            server_ip=server_ip,
             domains=domains,
             resolved_ips=resolved_ips))
 
-    print(len(lookups))
     for l in lookups:
         print(l)
 
-    unique_lookups = list_distinct_domain_names(lookups)
-    resolved_ips_by_domain = get_resolved_ips_by_domain(lookups)
+    resolved_ips_by_domain = _list_resolved_ips_by_domain(lookups)
     for ri in resolved_ips_by_domain:
         print(f"{ri}: {resolved_ips_by_domain[ri]}")
-
-    print(id_counter.most_common(10))
-
 
 
 if __name__ == "__main__":
