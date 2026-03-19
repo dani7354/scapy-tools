@@ -20,9 +20,9 @@ _qtypes = {
 @dataclasses.dataclass(frozen=True, eq=True)
 class DNSLookup:
     transaction_id: int
-    qtype: str
     client_ip: str
     server_ip: str
+    qtypes: list[str]
     domains: list[str] = dataclasses.field(default_factory=list)
     resolved_ips: list[str] = dataclasses.field(default_factory=list)
 
@@ -38,17 +38,15 @@ def _try_parse_ips(data: Packet) -> tuple[str, str] | None:
     return server_ip, client_ip
 
 
-def _try_parse_response(dns_data: Packet) -> list[str]:
-    ips, rtypes = [], set()
+def _try_parse_response(dns_data: Packet) -> tuple[list[str], list[str]]:
+    ips, types = [], set()
     a = dns_data.an
     if a and hasattr(a, "rdata"):
         for r in a:
             ips.append(r.rdata)
-            rtypes.add(r.type)
+            types.add(_qtypes[r.type])
 
-    print(rtypes)
-
-    return ips
+    return ips, list(types)
 
 
 def _try_parse_request(dns_data: Packet) -> tuple[list[str], list[str]]:
@@ -103,14 +101,13 @@ def main() -> None:
             continue
 
         transaction_id = dns_data.id
-        resolved_ips = _try_parse_response(dns_data)
+        resolved_ips, response_types = _try_parse_response(dns_data)
         qtypes, domains = request
-        qtype = _qtypes[int(qtypes[0])]
         lookups.append(DNSLookup(
             transaction_id= transaction_id,
-            qtype=qtype,
             client_ip=client_ip,
             server_ip=server_ip,
+            qtypes=response_types,
             domains=domains,
             resolved_ips=resolved_ips))
 
