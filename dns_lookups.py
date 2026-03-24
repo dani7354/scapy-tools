@@ -43,7 +43,8 @@ def _try_parse_response(dns_data: Packet) -> tuple[list[str], list[str]]:
     a = dns_data.an
     if a and hasattr(a, "rdata"):
         for r in a:
-            ips.append(r.rdata)
+            if "rdata" in list(dir(r)):
+                ips.append(r.rdata)
             types.add(_qtypes[r.type])
 
     return ips, list(types)
@@ -60,6 +61,10 @@ def _try_parse_request(dns_data: Packet) -> tuple[list[str], list[str]]:
     return qtypes, domains
 
 
+def _list_distinct_query_types(lookups: list[DNSLookup]) -> set[str]:
+    return set(qtype for lookup in lookups for qtype in lookup.qtypes)
+
+
 def _list_distinct_domain_names(lookups: list[DNSLookup]) -> set[str]:
     return set(domain for lookup in lookups for domain in lookup.domains)
 
@@ -72,6 +77,11 @@ def _list_resolved_ips_by_domain(lookups: list[DNSLookup]) -> dict[str, set[str]
 
     return resolved_ips_by_domain
 
+
+def _write_csv(filename: str, rows: list[str]) -> None:
+    with open(filename, "w") as f:
+        for r in rows:
+            f.write(f"{r}\n")
 
 
 def main() -> None:
@@ -104,7 +114,7 @@ def main() -> None:
         resolved_ips, response_types = _try_parse_response(dns_data)
         qtypes, domains = request
         lookups.append(DNSLookup(
-            transaction_id= transaction_id,
+            transaction_id=transaction_id,
             client_ip=client_ip,
             server_ip=server_ip,
             qtypes=response_types,
@@ -115,8 +125,22 @@ def main() -> None:
         print(l)
 
     resolved_ips_by_domain = _list_resolved_ips_by_domain(lookups)
-    for ri in resolved_ips_by_domain:
-        print(f"{ri}: {resolved_ips_by_domain[ri]}")
+    rows = []
+    for ri, ips in resolved_ips_by_domain.items():
+        if not ips:
+            continue
+        ips_str = ', '.join(list(str(ip) for ip in ips))
+        rows.append(f"{ri};{ips_str}")
+
+    _write_csv(f"{file_path.stem}_resolved_domains.csv", rows)
+
+    print(f"not resolved: {len([x for x, y in resolved_ips_by_domain.items() if not y])}")
+
+    query_types = _list_distinct_query_types(lookups)
+    print(f"Query types: {query_types}")
+
+    #unique_domains = _list_distinct_domain_names(lookups)
+    #_write_csv("5_domains.csv", sorted(unique_domains))
 
 
 if __name__ == "__main__":

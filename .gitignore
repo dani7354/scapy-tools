@@ -1,8 +1,8 @@
 *.pcap
 *.pcapng
+*.csv
 .swp
 .idea/
-*.csv
 venv/
 .DS_Store
 .vscode/
